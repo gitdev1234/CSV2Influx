@@ -6,11 +6,8 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"os"
-	"os/signal"
 	"path/filepath"
-	"syscall"
 
 	"github.com/gitdev1234/CSV2Influx/csv"
 )
@@ -68,11 +65,6 @@ func main() {
 	fmt.Println("write to influxdb database")
 	influx = NewInfluxConnection()
 	influx.AddMultiline(lines)
-
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	sig := <-sigs
-	log.Println("received", sig)
 
 	if influx != nil {
 		influx.Close()
