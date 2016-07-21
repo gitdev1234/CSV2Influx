@@ -21,7 +21,9 @@ type InfluxConnection struct {
 func NewInfluxConnection() *InfluxConnection {
 	// Make client
 	c, err := client.NewHTTPClient(client.HTTPConfig{
-		Addr: host,
+		Addr:     host,
+		Username: username,
+		Password: password,
 	})
 
 	if err != nil {

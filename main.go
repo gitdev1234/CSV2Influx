@@ -17,16 +17,28 @@ import (
 
 var (
 	host     string
-	tag      string
-	path     string
 	database string
-	influx   *InfluxConnection
+	username string
+	password string
+
+	tag string
+
+	path   string
+	header bool
+
+	influx *InfluxConnection
 )
 
 func main() {
-	flag.StringVar(&host, "h", "localhost", "host of influxdb (default: localhost)")
-	flag.StringVar(&tag, "tag", "WeatherStation", "DataSource tag (default: WeatherStation)")
-	flag.StringVar(&path, "f", "test/*.csv", "files to import (default: test/*.csv)")
+	flag.StringVar(&host, "h", "http://localhost:8086", "host of influxdb")
+	flag.StringVar(&database, "db", "WeatherData", "database of influxdb")
+	flag.StringVar(&username, "username", "", "username of influxdb")
+	flag.StringVar(&password, "password", "", "password of influxdb")
+
+	flag.StringVar(&tag, "tag", "WeatherStation", "DataSource tag")
+
+	flag.StringVar(&path, "f", "test/*.csv", "files to import")
+	flag.BoolVar(&header, "header", true, "csv has a header line")
 	flag.Parse()
 
 	files, _ := filepath.Glob(path)
@@ -35,18 +47,28 @@ func main() {
 		openfile, _ := os.Open(file)
 		defer openfile.Close()
 		r := csvreader.NewReader(bufio.NewReader(openfile))
+		tmpheader := header
 		for {
 			record, err := r.Read()
 			// Stop at EOF.
 			if err == io.EOF {
 				break
 			}
-			fmt.Printf("  %v: %v : %v \n", record[0], record[1], record[2])
+			if !tmpheader {
+				lines.Add(record)
+			} else {
+				tmpheader = false
+			}
 		}
+		fmt.Printf("imported %v\n", file)
 	}
-
+	for time, values := range lines.LinesTime {
+		fmt.Printf("%v: %v\n", time, values)
+	}
+	fmt.Println("write to influxdb database")
 	influx = NewInfluxConnection()
 	influx.AddMultiline(lines)
+
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-sigs
